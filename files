@@ -1,2 +1,13 @@
 #!/bin/bash
-ls -p | grep -v /
+
+# List only files (excluding directories) in the current directory
+FILES=$(ls -p | grep -v /)
+DIRS=$(ls -d */ 2>/dev/null)
+
+if [ -n "$FILES" ]; then
+    echo "$FILES"
+elif [ -n "$DIRS" ]; then
+    echo "Only directories found in the current directory."
+else
+    echo "No files found in the current directory."
+fi
