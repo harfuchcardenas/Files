@@ -72,11 +72,11 @@ closedir $dh;
 # --- Conditional Output based on what was found ---
 
 if (@found_files) {
-    # Sort files by modified date in reverse order (most recently modified first).
+    # Sort files by modified date in ascending order (oldest first).
     # (stat($a))[9] gets the modification time (mtime) in seconds since epoch for file $a.
     # <=> is the numeric comparison operator.
-    # $b <=> $a sorts in descending order (newest first).
-    foreach my $file_path (sort { (stat($b))[9] <=> (stat($a))[9] } @found_files) {
+    # $a <=> $b sorts in ascending order (oldest first).
+    foreach my $file_path (sort { (stat($a))[9] <=> (stat($b))[9] } @found_files) {
         # Extract just the file name from the full path using basename()
         my $file_name = basename($file_path);
         # Print only the file name, in blue and bold
@@ -91,3 +91,4 @@ if (@found_files) {
 }
 
 exit 0; # Exit successfully
+
