@@ -44,7 +44,7 @@ unless (defined $abs_directory_path && -d $abs_directory_path) {
 
 # --- Core Logic to List Files Only ---
 
-my @found_files;       # Array to store names of files found
+my @found_files;       # Array to store full paths of files found
 my $has_subdirectories = 0; # Flag to check if any subdirectories exist
 
 # Open the target directory for reading.
@@ -60,7 +60,7 @@ while (my $entry = readdir $dh) {
 
     # Check if the entry is a file or a directory.
     if (-f $full_entry_path) {
-        push @found_files, $entry; # Store the file name (not full path)
+        push @found_files, $full_entry_path; # Store the full path for sorting by date
     } elsif (-d $full_entry_path) {
         $has_subdirectories = 1; # Set flag if a directory is found
     }
@@ -72,8 +72,13 @@ closedir $dh;
 # --- Conditional Output based on what was found ---
 
 if (@found_files) {
-    # Sort files by name (lexicographically)
-    foreach my $file_name (sort @found_files) {
+    # Sort files by modified date in reverse order (most recently modified first).
+    # (stat($a))[9] gets the modification time (mtime) in seconds since epoch for file $a.
+    # <=> is the numeric comparison operator.
+    # $b <=> $a sorts in descending order (newest first).
+    foreach my $file_path (sort { (stat($b))[9] <=> (stat($a))[9] } @found_files) {
+        # Extract just the file name from the full path using basename()
+        my $file_name = basename($file_path);
         # Print only the file name, in blue and bold
         print COLOR_BOLD . COLOR_BLUE . "'$file_name'" . COLOR_RESET . "\n";
     }
@@ -86,4 +91,3 @@ if (@found_files) {
 }
 
 exit 0; # Exit successfully
-
