@@ -7,13 +7,11 @@ use File::Spec; # Import File::Spec for path manipulation (e.g., building full p
 use File::Basename; # Import basename function for extracting file/directory names
 
 # ANSI escape codes for text colors and styles
-# \e[34m sets foreground color to blue
-# \e[1m sets text to bold
-# \e[0m resets all attributes (color, bold, etc.) to default
 use constant {
-    COLOR_BLUE  => "\e[34m",
-    COLOR_BOLD  => "\e[1m",
-    COLOR_RESET => "\e[0m",
+    COLOR_BLUE        => "\e[34m",   # Marino
+    COLOR_GREEN       => "\e[32m",   # Verde
+    COLOR_BOLD        => "\e[1m",
+    COLOR_RESET       => "\e[0m",
 };
 
 # Determine the target directory path.
@@ -34,21 +32,21 @@ my $abs_directory_path = eval { abs_path($directory_input) };
 unless (defined $abs_directory_path && -d $abs_directory_path) {
     if (defined $abs_directory_path) {
         # Path exists but is not a directory (e.g., it's a file)
-        print "Error: The path '$abs_directory_path' exists but is not a directory.\n";
+        print "Error: La ruta '$abs_directory_path' existe pero no es un directorio.\n";
     } else {
         # Path could not be resolved or does not exist (e.g., misspelled, non-existent)
-        print "Error: The specified path '$directory_input' is invalid or does not exist.\n";
+        print "Error: La ruta especificada '$directory_input' es inválida o no existe.\n";
     }
     exit 1; # Exit with a non-zero status to indicate an error
 }
 
-# --- Core Logic to List Files Only ---
+# --- Core Logic to List Files and Links ---
 
-my @found_files;       # Array to store full paths of files found
-my $has_subdirectories = 0; # Flag to check if any subdirectories exist
+my @found_files_and_links;  # Array to store full paths of files and links found
+my $has_subdirectories = 0;   # Flag to check if any subdirectories exist
 
 # Open the target directory for reading.
-opendir(my $dh, $abs_directory_path) or die "Cannot open directory '$abs_directory_path': $!";
+opendir(my $dh, $abs_directory_path) or die "No se puede abrir el directorio '$abs_directory_path': $!";
 
 # Read each entry in the directory.
 while (my $entry = readdir $dh) {
@@ -58,9 +56,12 @@ while (my $entry = readdir $dh) {
     # Construct the full path to the entry.
     my $full_entry_path = File::Spec->catfile($abs_directory_path, $entry);
 
-    # Check if the entry is a file or a directory.
-    if (-f $full_entry_path) {
-        push @found_files, $full_entry_path; # Store the full path for sorting by date
+    # Check if the entry is a file, a link, or a directory.
+    if (-f $full_entry_path || -l $full_entry_path) { # -f for files, -l for symbolic links
+        push @found_files_and_links, {
+            path => $full_entry_path,
+            type => (-l $full_entry_path ? 'link' : 'file') # Determine type
+        };
     } elsif (-d $full_entry_path) {
         $has_subdirectories = 1; # Set flag if a directory is found
     }
@@ -71,24 +72,29 @@ closedir $dh;
 
 # --- Conditional Output based on what was found ---
 
-if (@found_files) {
-    # Sort files by modified date in ascending order (oldest first).
-    # (stat($a))[9] gets the modification time (mtime) in seconds since epoch for file $a.
-    # <=> is the numeric comparison operator.
-    # $a <=> $b sorts in ascending order (oldest first).
-    foreach my $file_path (sort { (stat($a))[9] <=> (stat($b))[9] } @found_files) {
-        # Extract just the file name from the full path using basename()
-        my $file_name = basename($file_path);
-        # Print only the file name, in blue and bold
-        print COLOR_BOLD . COLOR_BLUE . "'$file_name'" . COLOR_RESET . "\n";
+if (@found_files_and_links) {
+    # Sort files and links by modified date in ascending order (oldest first).
+    # (stat($a->{path}))[9] gets the modification time (mtime) for the path in the hash reference.
+    foreach my $item (sort { (stat($a->{path}))[9] <=> (stat($b->{path}))[9] } @found_files_and_links) {
+        # Extract just the file/link name from the full path using basename()
+        my $item_name = basename($item->{path});
+        my $color;
+
+        if ($item->{type} eq 'link') {
+            $color = COLOR_GREEN;
+        } else { # Must be a file
+            $color = COLOR_BLUE;
+        }
+
+        # Print the item name with the appropriate color and bold
+        print COLOR_BOLD . $color . "'$item_name'" . COLOR_RESET . "\n";
     }
 } elsif ($has_subdirectories) {
-    # If no files were found but there are directories
-    print "Only directories found in the specified directory.\n";
+    # If no files or links were found but there are directories
+    print "Solo se encontraron directorios en el directorio especificado.\n";
 } else {
-    # If neither files nor directories were found (directory is empty)
-    print "No files found in the specified directory.\n";
+    # If neither files, links, nor directories were found (directory is empty)
+    print "No se encontraron archivos ni enlaces simbólicos en el directorio especificado.\n";
 }
 
 exit 0; # Exit successfully
-
