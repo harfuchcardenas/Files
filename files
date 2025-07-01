@@ -32,10 +32,10 @@ my $abs_directory_path = eval { abs_path($directory_input) };
 unless (defined $abs_directory_path && -d $abs_directory_path) {
     if (defined $abs_directory_path) {
         # Path exists but is not a directory (e.g., it's a file)
-        print "Error: La ruta '$abs_directory_path' existe pero no es un directorio.\n";
+        print "Error: '$abs_directory_path' contains no directories.\n";
     } else {
         # Path could not be resolved or does not exist (e.g., misspelled, non-existent)
-        print "Error: La ruta especificada '$directory_input' es inválida o no existe.\n";
+        print "Error: '$directory_input' does not exist.\n";
     }
     exit 1; # Exit with a non-zero status to indicate an error
 }
@@ -46,7 +46,7 @@ my @found_files_and_links;  # Array to store full paths of files and links found
 my $has_subdirectories = 0;   # Flag to check if any subdirectories exist
 
 # Open the target directory for reading.
-opendir(my $dh, $abs_directory_path) or die "No se puede abrir el directorio '$abs_directory_path': $!";
+opendir(my $dh, $abs_directory_path) or die "The directory '$abs_directory_path' cannot be opened: $!";
 
 # Read each entry in the directory.
 while (my $entry = readdir $dh) {
@@ -91,10 +91,10 @@ if (@found_files_and_links) {
     }
 } elsif ($has_subdirectories) {
     # If no files or links were found but there are directories
-    print "Solo se encontraron directorios en el directorio especificado.\n";
+    print "Only directories can be found in the specified pathOnly directories can be found in the specified path.\n";
 } else {
     # If neither files, links, nor directories were found (directory is empty)
-    print "No se encontraron archivos ni enlaces simbólicos en el directorio especificado.\n";
+    print "There are neither files nor links in the specified path.\n";
 }
 
 exit 0; # Exit successfully
