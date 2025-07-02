@@ -8,10 +8,11 @@ use File::Basename; # Import basename function for extracting file/directory nam
 
 # ANSI escape codes for text colors and styles
 use constant {
-    COLOR_BLUE        => "\e[34m",   # Marino
-    COLOR_GREEN       => "\e[32m",   # Verde
-    COLOR_BOLD        => "\e[1m",
-    COLOR_RESET       => "\e[0m",
+    COLOR_BLUE          => "\e[34m",   # Marino (original, not used for files/links in this version)
+    COLOR_GREEN         => "\e[32m",   # Verde
+    COLOR_CYAN          => "\e[36m",   # CIANO - New color for regular files
+    COLOR_BOLD          => "\e[1m",
+    COLOR_RESET         => "\e[0m",
 };
 
 # Determine the target directory path.
@@ -78,23 +79,27 @@ if (@found_files_and_links) {
     foreach my $item (sort { (stat($a->{path}))[9] <=> (stat($b->{path}))[9] } @found_files_and_links) {
         # Extract just the file/link name from the full path using basename()
         my $item_name = basename($item->{path});
-        my $color;
+        my $color_code;
+        my $bold_code = ''; # Start with no bold, add if needed
 
         if ($item->{type} eq 'link') {
-            $color = COLOR_GREEN;
-        } else { # Must be a file
-            $color = COLOR_BLUE;
+            $color_code = COLOR_GREEN;
+            $bold_code = COLOR_BOLD; # Links should be bold green
+        } else { # Must be a regular file
+            $color_code = COLOR_CYAN;
+            # Files are just cyan, not bold
         }
 
-        # Print the item name with the appropriate color and bold
-        print COLOR_BOLD . $color . "'$item_name'" . COLOR_RESET . "\n";
+        # Print the item name with the appropriate color and bold (if applicable)
+        print $bold_code . $color_code . "'$item_name'" . COLOR_RESET . "\n";
     }
 } elsif ($has_subdirectories) {
     # If no files or links were found but there are directories
-    print "Only directories can be found in the specified pathOnly directories can be found in the specified path.\n";
+    print "Only directories can be found in the specified path.\n";
 } else {
     # If neither files, links, nor directories were found (directory is empty)
     print "There are neither files nor links in the specified path.\n";
 }
 
 exit 0; # Exit successfully
+
