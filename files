@@ -18,8 +18,15 @@ use constant {
 # Determine the target directory path.
 # If an argument is provided, use it; otherwise, default to the current directory ('.').
 my $directory_input;
+my $count_only = 0; # Flag for the new -n feature
+
 if (@ARGV) {
-    $directory_input = $ARGV[0];
+    if ($ARGV[0] eq '-n') {
+        $count_only = 1;
+        $directory_input = '.'; # When -n is used, always count in the current directory
+    } else {
+        $directory_input = $ARGV[0];
+    }
 } else {
     $directory_input = '.';
 }
@@ -41,10 +48,11 @@ unless (defined $abs_directory_path && -d $abs_directory_path) {
     exit 1; # Exit with a non-zero status to indicate an error
 }
 
-# --- Core Logic to List Files and Links ---
+# --- Core Logic to List Files and Links or Count Files ---
 
 my @found_files_and_links;  # Array to store full paths of files and links found
 my $has_subdirectories = 0;   # Flag to check if any subdirectories exist
+my $file_count = 0; # Counter for the -n option
 
 # Open the target directory for reading.
 opendir(my $dh, $abs_directory_path) or die "The directory '$abs_directory_path' cannot be opened: $!";
@@ -59,10 +67,13 @@ while (my $entry = readdir $dh) {
 
     # Check if the entry is a file, a link, or a directory.
     if (-f $full_entry_path || -l $full_entry_path) { # -f for files, -l for symbolic links
-        push @found_files_and_links, {
-            path => $full_entry_path,
-            type => (-l $full_entry_path ? 'link' : 'file') # Determine type
-        };
+        $file_count++; # Increment count for both files and links
+        unless ($count_only) { # Only store if not in count-only mode
+            push @found_files_and_links, {
+                path => $full_entry_path,
+                type => (-l $full_entry_path ? 'link' : 'file') # Determine type
+            };
+        }
     } elsif (-d $full_entry_path) {
         $has_subdirectories = 1; # Set flag if a directory is found
     }
@@ -71,9 +82,11 @@ while (my $entry = readdir $dh) {
 # Close the directory handle.
 closedir $dh;
 
-# --- Conditional Output based on what was found ---
+# --- Conditional Output based on what was found or the -n option ---
 
-if (@found_files_and_links) {
+if ($count_only) {
+    print "Number of files in the current directory: $file_count\n";
+} elsif (@found_files_and_links) {
     # Sort files and links by modified date in ascending order (oldest first).
     # (stat($a->{path}))[9] gets the modification time (mtime) for the path in the hash reference.
     foreach my $item (sort { (stat($a->{path}))[9] <=> (stat($b->{path}))[9] } @found_files_and_links) {
@@ -102,4 +115,3 @@ if (@found_files_and_links) {
 }
 
 exit 0; # Exit successfully
-
