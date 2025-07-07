@@ -16,19 +16,24 @@ use constant {
 };
 
 # Determine the target directory path.
-# If an argument is provided, use it; otherwise, default to the current directory ('.').
 my $directory_input;
 my $count_only = 0; # Flag for the new -n feature
 
+# Parse command-line arguments
 if (@ARGV) {
     if ($ARGV[0] eq '-n') {
         $count_only = 1;
-        $directory_input = '.'; # When -n is used, always count in the current directory
+        # If -n is provided, check if a second argument (path) is also given
+        if (defined $ARGV[1]) {
+            $directory_input = $ARGV[1]; # Use the provided path for counting
+        } else {
+            $directory_input = '.'; # Default to current directory if no path provided with -n
+        }
     } else {
-        $directory_input = $ARGV[0];
+        $directory_input = $ARGV[0]; # No -n, so the first arg is the directory to list
     }
 } else {
-    $directory_input = '.';
+    $directory_input = '.'; # No arguments, default to current directory for listing
 }
 
 # Resolve the absolute path to handle relative paths like '.' or '..'.
@@ -43,7 +48,7 @@ unless (defined $abs_directory_path && -d $abs_directory_path) {
         print "Error: '$abs_directory_path' contains no directories.\n";
     } else {
         # Path could not be resolved or does not exist (e.g., misspelled, non-existent)
-        print "Error: '$directory_input' does not exist.\n";
+        print "Error: '$directory_input' does not exist or is not a directory.\n";
     }
     exit 1; # Exit with a non-zero status to indicate an error
 }
@@ -65,10 +70,10 @@ while (my $entry = readdir $dh) {
     # Construct the full path to the entry.
     my $full_entry_path = File::Spec->catfile($abs_directory_path, $entry);
 
-    # Check if the entry is a file, a link, or a directory.
+    # Check if the entry is a file, a link.
     if (-f $full_entry_path || -l $full_entry_path) { # -f for files, -l for symbolic links
         $file_count++; # Increment count for both files and links
-        unless ($count_only) { # Only store if not in count-only mode
+        unless ($count_only) { # Only store for listing if not in count-only mode
             push @found_files_and_links, {
                 path => $full_entry_path,
                 type => (-l $full_entry_path ? 'link' : 'file') # Determine type
@@ -85,7 +90,7 @@ closedir $dh;
 # --- Conditional Output based on what was found or the -n option ---
 
 if ($count_only) {
-    print "Number of files in the current directory: $file_count\n";
+    print "Number of files in '$abs_directory_path': $file_count\n";
 } elsif (@found_files_and_links) {
     # Sort files and links by modified date in ascending order (oldest first).
     # (stat($a->{path}))[9] gets the modification time (mtime) for the path in the hash reference.
@@ -115,3 +120,4 @@ if ($count_only) {
 }
 
 exit 0; # Exit successfully
+
