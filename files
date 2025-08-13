@@ -59,6 +59,8 @@ my @found_files_and_links;  # Array to store full paths of files and links found
 my $has_subdirectories = 0;   # Flag to check if any subdirectories exist
 my $file_count = 0; # Counter for the -n option
 
+# Clear window
+system('clear');
 # Open the target directory for reading.
 opendir(my $dh, $abs_directory_path) or die "The directory '$abs_directory_path' cannot be opened: $!";
 
